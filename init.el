@@ -274,6 +274,11 @@ ACCEPT-NIL が 非nilの場合、PATHNAME が nil でもエラーを發生させ
 (add-to-list 'load-path (user-emacs-directory))
 
 
+;;; `hm-' prefix
+
+(require 'hm-group)
+
+
 ;;; Language and Character Encoding
 
 (set-language-environment "Japanese")
@@ -1244,261 +1249,7 @@ Example:
 
 ;;; Faces
 
-(require 'font-lock)
-
-(eval-after-load "font-lock"
-  '(global-font-lock-mode t))
-
-(defgroup my-faces nil
-  "My faces for font-lock highlighthing."
-  :group 'my)
-
-
-;;; Heading Faces
-
-(defface my-heading-level-1-face
-  '((((class color) (background dark))
-     (:height 1.47 :foreground "#333372" :weight bold))
-    (t (nil)))
-  "Face for heading comment in Lisp or Emacs-Lisp mode buffer."
-  :group 'my-faces)
-
-(defface my-heading-level-1-filename-part-face
-  '((((class color) (background dark))
-     (:height 2.0 :foreground "white" :weight bold))
-    (t (nil)))
-  "Face for heading top-level heading comment (the first line) in
-Emacs-Lisp mode buffer."
-  :group 'my-faces)
-
-(defface my-heading-level-1-description-part-face
-  '((((class color) (background dark))
-     (:height 0.6 :weight bold :foreground "LightGray"
-              :inherit 'my-heading-level-1-filename-part-face))
-    (t (nil)))
-  "Face for heading top-level heading comment (the first line) in
-Emacs-Lisp mode buffer."
-  :group 'my-faces)
-
-(defface my-heading-level-2-face
-  '((((class color) (background dark))
-     (:height 1.6 :foreground "deep sky blue" :weight bold))
-    (t (nil)))
-  "Face for heading comment in Lisp or Emacs-Lisp mode buffer."
-  :group 'my-faces)
-
-(defface my-heading-level-3-face
-  '((((class color) (background light))
-     (:height 1.5 :weight bold :foreground "forest green"))
-    (((class color) (background dark))
-     (:height 1.5 :weight bold :foreground "orange"))
-    (t (nil)))
-  "Face for heading comment in Lisp or Emacs-Lisp mode buffer."
-  :group 'my-faces)
-
-(defface my-heading-level-4-face
-  '((((class color) (background light))
-     (:height 1.2 :weight bold :foreground "dark green"))
-    (((class color) (background dark))
-     (:height 1.2 :weight bold :foreground "spring green"))
-    (t (nil)))
-  "Face for heading comment in Lisp or Emacs-Lisp mode buffer."
-  :group 'my-faces)
-
-(defface my-heading-level-5-face
-  '((((class color) (background light))
-     (:weight bold :foreground "Firebrick"))
-    (((class color) (background dark))
-     (:weight bold :foreground "chocolate1"))
-    (t (nil)))
-  "Face for heading comment in Lisp or Emacs-Lisp mode buffer."
-  :group 'my-faces)
-
-(defface my-ends-here-comment-face
-  '((((class color) (background light))
-     (:weight bold :foreground "Firebrick"))
-    (((class color) (background dark))
-     (:weight bold :foreground "chocolate1"))
-    (t (nil)))
-  "Face for end here comment (e.g. \";;; .emacs.el ends here.\")."
-  :group 'my-faces)
-
-
-;;; Bracket Faces
-
-(defface my-paren-face
-  '((((class color) (background light))
-     (:foreground "#999"))
-    (((class color) (background dark))
-     (:foreground "#AAA"))
-    (t (nil)))
-  "Face for parenthesis in source code."
-  :group 'my-faces)
-
-(defface my-brace-face
-  '((((class color) (background light))
-     (:foreground "#999"))
-    (((class color) (background dark))
-     (:foreground "#AAA"))
-    (t (nil)))
-  "Face for braces in source code."
-  :group 'my-faces)
-
-(defface my-bracket-face
-  '((((class color) (background light))
-     (:foreground "#999"))
-    (((class color) (background dark))
-     (:foreground "#AAA"))
-    (t (nil)))
-  "Face for bracket in source code."
-  :group 'my-faces)
-
-(font-lock-add-keywords 'lisp-mode '(("(\\|)" . 'my-paren-face)))
-(font-lock-add-keywords 'emacs-lisp-mode '(("(\\|)" . 'my-paren-face)))
-(font-lock-add-keywords 'js-mode '(("(\\|)" . 'my-paren-face)))
-(font-lock-add-keywords 'js-mode '(("{\\|}" . 'my-brace-face)))
-(font-lock-add-keywords 'js-mode '(("\\[\\|\\]" . 'my-bracket-face)))
-
-
-;;; Font-lock matcher regexps
-
-(defvar my-heading-level-3-lisp-re
-  "^;;;\\(?:[ \t]*\\|[ \t].+?\\)$")
-
-
-;;; Font-lock matcher functions
-
-(defun my-re-search-orphaned-line-forward (line-re &optional limit)
-  "現在位置からバッファ位置 LIMIT まで、乃至 LIMIT が NIL であれば
-`point-max' までの間で 、正規表現 LINE-RE に一致し、且つ前後の行が
-同じ正規表現に一致 *しない* 行(孤立行)を探索し、その行に正規表現
-LINE-RE が一致した際の `match-data' を返す。
-
-LINE-RE が複數行に一致し得る正規表現だつた場合の擧動は未定義。"
-  (let ((looking-at-relative-line
-         #'(lambda (relative-line-number regexp)
-             (save-excursion
-               (save-restriction
-                 (widen)
-                 (and (zerop (forward-line relative-line-number))
-                      (looking-at regexp)))))))
-    (save-restriction
-      (narrow-to-region (point) (or limit (point-max)))
-      (when (re-search-forward line-re nil t)
-        (when (save-match-data
-                (not (or (apply looking-at-relative-line (list -1 line-re))
-                         (apply looking-at-relative-line (list 1 line-re)))))
-          (match-data))))))
-
-
-;;; Add font lock keywords for Emacs Lisp mode
-
-(font-lock-add-keywords 'emacs-lisp-mode
-  `(("^;;; .*"
-     . (0 'my-heading-level-4-face t))
-    ("^;;;; .*"
-     . (0 'my-heading-level-5-face t))
-    ((lambda (limit)
-       (my-re-search-orphaned-line-forward my-heading-level-3-lisp-re limit))
-     . (0 'my-heading-level-3-face t))
-    ("^;;; \\(?:Commentary\\|Code\\):[ \t]*$"
-     . (0 'my-heading-level-2-face t))
-    ("^;;; \\(?:.+? \\)?ends here[.]?\\s-*$"
-     . (0 'my-ends-here-comment-face t))
-    ;;
-    ;; First line.
-    ("\\`;;; \\(.+? --- .+\\)$" . (1 'my-heading-level-1-face t))
-    ;;
-    ;; First line with filename and short description.
-    ("\\`\\(;;; .*?\\)\\(\\(?: \\(---\\|—\\) .+\\)?\\)$"
-     (1 'my-heading-level-1-filename-part-face t)
-     (2 'my-heading-level-1-description-part-face t))
-    ;;
-    ;; Advice.
-    ("\\<ad-do-it\\>" . (0 'font-lock-builtin-face))
-    ;;
-    ;; "def****" macros.
-    ;; (this keyword definition is based on `lisp-font-lock-keywords-1' defined
-    ;; in `font-lock.el').
-    (,(concat "(\\("
-              ;; Package prefix.
-              "\\(?:\\sw+?-\\)"
-              "def\\(?:ine-?\\)?"
-              ;; Variable declarations.
-              "\\(?:\\(?:\\(?:buffer-?\\)?local-?\\)?var\\(?:iable\\)?\\)\\)\\>"
-              ;; Any whitespace and defined object.
-              "[ \t'\(]*"
-              "\\(setf[ \t]+\\sw+)\\|\\sw+\\)?")
-     (1 'font-lock-keyword-face)
-     (2 'font-lock-variable-name-face nil t))))
-
-;;;; Font Lock Keywords in Lisp Mode
-
-(font-lock-add-keywords 'lisp-mode
-  `(((lambda (limit)
-       (my-re-search-orphaned-line-forward my-heading-level-3-lisp-re limit))
-     . (0 'my-heading-level-3-face t))
-    ("^;;; \\(?:Commentary\\|Code\\):[ \t]*$"
-     . (0 'my-heading-level-2-face t))
-    ("^;;; \\(?:.+? \\)?ends here[.]?\\s-*$"
-     . (0 'my-ends-here-comment-face t))))
-
-
-(defun my-lisp-add-function-keyword (name indent-hook-number)
-  (font-lock-add-keywords 'lisp-mode
-    `((,(concat "(\\(\\(?:[^:\s-]+:\\)?" (symbol-name name) "\\)\\>")
-       . (1 font-lock-keyword-face))))
-  (put name 'lisp-indent-hook indent-hook-number))
-
-(my-lisp-add-function-keyword 'defcfun 2) ;CFFI
-(my-lisp-add-function-keyword 'defcvar 2) ;CFFI
-(my-lisp-add-function-keyword 'defcenum 1);CFFI
-(my-lisp-add-function-keyword 'defctype 1) ;CFFI
-(my-lisp-add-function-keyword 'defcstruct 1) ;CFFI
-
-;;;; CSS mode
-
-(font-lock-add-keywords 'css-mode
-  `(("^[ \t]*/\\* ::::: .+? ::::: \\*/[ \t]*$"
-     . (0 'my-heading-level-2-face t))))
-
-;;;; Comment Lines
-
-(add-hook 'find-file-hook
-  #'(lambda ()
-      (when (or (string-match (concat "/\\.git/info/exclude\\'")
-                              (or (buffer-file-name) "")))
-        (set-syntax-table (let ((table (copy-syntax-table text-mode-syntax-table)))
-                            (modify-syntax-entry ?\# "<" table)
-                            (modify-syntax-entry ?\n ">" table)
-                            (modify-syntax-entry ?\\ "\\" table)
-                            table))
-        (font-lock-fontify-buffer))))
-
-
-(defun my-set-background-color-light ()
-  ;; Created: 2011-09-22T13:36:59+09:00
-  (interactive)
-  (set-background-color "#FEFEFA")
-  (set-foreground-color "black"))
-
-(defun my-set-background-color-dark ()
-  ;; Created: 2011-09-22T13:36:59+09:00
-  (interactive)
-  (set-background-color "gray4")
-  (set-foreground-color "white"))
-
-;; FIXME: `custom-set-faces' を使用しない設定に書き換へる。
-;; (custom-set-faces
-;;  ;; custom-set-faces was added by Custom.
-;;  ;; If you edit it by hand, you could mess it up, so be careful.
-;;  ;; Your init file should contain only one such instance.
-;;  ;; If there is more than one, they won't work right.
-;;  '(magit-item-highlight ((((class color) (background dark)) nil)))
-;;  '(markdown-list-face ((t (:inherit font-lock-builtin-face :weight bold))))
-;;  '(markdown-pre-face ((t (:inherit font-lock-constant-face :height 0.95 :family "Monospace"))))
-;;  '(region ((((class color) (background dark)) (:background "gray20"))))
-;;  '(sh-heredoc ((((min-colors 88) (class color) (background dark)) (:foreground "LightSalmon")) (((min-colors 88) (class color) (background light)) (:foreground "VioletRed4")))))
+(require 'hm-faces)
 
 
 ;;; Minibuffer
