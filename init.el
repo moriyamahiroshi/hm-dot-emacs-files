@@ -2534,7 +2534,7 @@ STRING が `/' を含まない場合は STRING と同じ内容の文字列を返
   (error "Not implemented."))
 
 (defun iso-8601-insert-iso-8601 ()
-  (interactive "p")
+  (interactive)
   (insert (iso-8601-w3c-dtf-string)))
 
 ;; `C-c' `i'nsert `t'ime と覺える。
